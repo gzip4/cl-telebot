@@ -2,29 +2,6 @@
 (in-package :cl-telebot)
 
 
-(defvar *bot* nil)
-(defvar *accept* "application/json")
-(defvar *update* nil)
-(defvar *parse-mode* '(:markdown "Markdown" :html "HTML"))
-
-
-(defclass bot ()
-  ((token :initarg :token)
-   (supports-inline-queries :reader bot-supports-inline-queries)
-   (can-read-all-group-messages :reader bot-can-read-all-group-messages)
-   (can-join-groups :reader bot-can-join-groups)
-   (username :reader bot-username)
-   (first-name :reader bot-first-name)
-   (id :reader bot-id)
-   (update-id :initform nil :accessor bot-update-id)))
-
-
-(defgeneric on-update (bot update))
-
-
-(defmethod on-update ((bot bot) update) nil)
-  
-
 (defun make-api-url (method)
   (format nil "https://api.telegram.org/bot~A/~A"
 	  (slot-value *bot* 'token) method))
@@ -33,21 +10,10 @@
 (defun call-api-method (method &optional request)
   (let* ((content (and request (jonathan:to-json request)))
 	 (response (dex:post (make-api-url method)
+			     :keep-alive t
 			     :headers '(("Content-Type" . "application/json"))
 			     :content content)))
     (getf (jonathan:parse response) :|result|)))
-
-
-;; bad version, consumes cpu on wait
-(defun call-api-method2 (method &optional request)
-  (let* ((content (and request (jonathan:to-json request)))
-	 (response (http-request (make-api-url method)
-				 :method :post
-				 :content-type *accept*
-				 :accept *accept*
-				 :content content))
-	 (json-string (flex:octets-to-string response :external-format :utf-8)))
-    (getf (jonathan:parse json-string) :|result|)))
 
 
 (defun init-bot-params (bot params)
@@ -56,7 +22,9 @@
 	(slot-value bot 'can-join-groups) (getf params :|can_join_groups|)
 	(slot-value bot 'username) (getf params :|username|)
 	(slot-value bot 'first-name) (getf params :|first_name|)
-	(slot-value bot 'id) (getf params :|id|)))
+	(slot-value bot 'id) (getf params :|id|))
+  (when *debug* (describe bot))
+  nil)
 
 
 (defun skip-update (update)
@@ -65,21 +33,27 @@
 
 (defun process-update (update)
   (setf (bot-update-id *bot*) (getf update :|update_id|))
-  (let ((*update* update))
-    (on-update *bot* update)))
+  (let ((*update-raw* update)
+	(*update* (make-update update)))
+    (on-update *bot* *update*)))
 
 
 (defun process-updates (&optional skip)
-  (let* ((update-id (bot-update-id *bot*))
-	 (request (and update-id (list :|offset| (1+ update-id) :|timeout| 1)))
-	 (updates (telebot::call-api-method "getUpdates" request)))
+  (let* ((update-id (bot-update-id *bot*)) request updates)
+    (setf (getf request :|timeout|) (if skip 0 *timeout*))
+    (when update-id
+      (setf (getf request :|offset|) (1+ update-id)))
+    (when *debug* (format *debug-io* "~&getUpdates: ~S~%" request))
+    (setf updates (telebot::call-api-method "getUpdates" request))
     (mapcar (if skip #'skip-update #'process-update) updates)
+    (sleep 0.00001)	    ; allows to interrupt (C-c C-c) processing
     updates))
 
 
-(defun process-long-polling (bot)
+(defun long-polling (bot &key debug)
+  "TODO: doc"
   (let ((*bot* bot)
-	(drakma:*drakma-default-external-format* :utf-8))
+	(*debug* debug))
     (init-bot-params bot (call-api-method "getMe"))
     (loop :for updates = (process-updates :skip)
 	  :while updates :do (progn))
@@ -93,6 +67,7 @@
 				    disable-notification
 				    reply-to-message-id
 				    reply-markup)
+  "TODO: doc"
   (declare (ignorable reply-markup))
   (let (request)
     (setf (getf request :|chat_id|) chat-id
@@ -104,15 +79,19 @@
       (setf (getf request :|disable_web_page_preview|) t))
     (when disable-notification
       (setf (getf request :|disable_notification|) t))
-    (format t "~A: ~A~&" "send" request)
-    (telebot::call-api-method "sendMessage" request)))
+    (when *debug* (format *debug-io* "~&Send request: ~S~%" request))
+    (let ((msg (make-message (call-api-method "sendMessage" request))))
+      (when *debug* (format *debug-io* "~&Send msg: ~S~%" msg))
+      (values msg))))
 
 
-(defun reply (text &key (parse-mode :markdown)
+(defun reply (text &key parse-mode
 		     disable-web-page-preview
 		     disable-notification
 		     reply-markup)
-  (let ((message (getf *update* :|message|)))
+  "TODO: doc"
+  (let ((message (or (getf *update-raw* :|message|)
+		     (getf *update-raw* :|edited_message|))))
     (when message
       (let* ((message-id (getf message :|message_id|))
 	     (chat (getf message :|chat|))
@@ -126,3 +105,16 @@
 			:disable-notification disable-notification
 			:reply-to-message-id reply-to
 			:reply-markup reply-markup))))))
+
+
+(defmethod on-update ((bot bot) update)
+  "Default bot update handler"
+  nil)
+
+
+(defmethod on-update ((bot echo-bot) update)
+  "Echo telegram bot"
+  (let ((text (message-text (update-message update))))
+    (when text
+      (reply (format nil "echo bot: <i>~a</i>" text) :parse-mode :html))))
+  

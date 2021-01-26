@@ -7,8 +7,11 @@
 (asdf:defsystem :cl-telebot
   :serial t
   :version "0.1.0"
-  :depends-on (:drakma :dexador :jonathan :flexi-streams)
+  :depends-on (:dexador :jonathan :alexandria)
   :components ((:file "packages")
+               (:file "specials")
                (:file "conditions")
+               (:file "classes")
+               (:file "objects")
                (:file "bot")))
 
