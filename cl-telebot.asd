@@ -6,7 +6,7 @@
 
 (asdf:defsystem :cl-telebot
   :serial t
-  :version "0.1.0"
+  :version "0.2.0"
   :depends-on (:dexador :jonathan :alexandria)
   :components ((:file "packages")
                (:file "specials")
