@@ -32,7 +32,7 @@
 
 (defmethod print-object ((obj message) stream)
   (print-unreadable-object (obj stream :type nil :identity nil)
-    (format stream "MESSAGE:id=~a,date=~a,chat=~a~@[,from=~a~]~@[,text=~a~]~@[,edit-date=~a~]~@[,entities=~a~]"
+    (format stream "MESSAGE:id=~a,date=~a,chat=~a~@[,from=~a~]~@[,text=~s~]~@[,edit-date=~a~]~@[,entities=(~{~a~^ ~})~]"
 	    (object-id obj)
 	    (message-date obj)
 	    (message-chat obj)
