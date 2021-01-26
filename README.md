@@ -14,7 +14,7 @@ Code samples:
       ;; do something useful
       )
    
-   (telebot:replay "some text")      ; replay current message, if any
+   (telebot:reply "some text")      ; reply current message, if any
    (telebot:send-message "<chat-id>" "some text")
    nil)
 (telebot:long-polling (make-instance 'my-bot :token "<token>"))
