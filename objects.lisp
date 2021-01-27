@@ -4,8 +4,9 @@
 
 (defmethod print-object ((obj entity) stream)
   (print-unreadable-object (obj stream :type nil :identity nil)
-    (format stream "ENTITY:type=~a,offset=~a,length=~a~@[,url=~a~]"
+    (format stream "ENTITY:type=~s,text=~s,offset=~a,length=~a~@[,url=~a~]"
 	    (entity-type obj)
+	    (entity-text obj)
 	    (entity-offset obj)
 	    (entity-length obj)
 	    (entity-url obj))))
@@ -52,18 +53,23 @@
 	    )))
 
 
-(defun make-entity (entity)
+(defun make-entity (text entity)
   (when entity
-    (let ((e (make-instance 'entity)))
-      (setf (slot-value e 'type) (alexandria:make-keyword (getf entity :|type|))
-	    (slot-value e 'offset) (getf entity :|offset|)
-	    (slot-value e 'length) (getf entity :|length|)
-	    (slot-value e 'url) (getf entity :|url|))
-      (values e))))
+    (flet ((f (x) (if (char= x #\_) #\- x)))
+      (let ((e (make-instance 'entity))
+	    (type (string-upcase (map 'string #'f (getf entity :|type|))))
+	    (offset (getf entity :|offset|))
+	    (length (getf entity :|length|)))
+	(setf (slot-value e 'type) (alexandria:make-keyword type)
+	      (slot-value e 'offset) offset
+	      (slot-value e 'length) length
+	      (slot-value e 'url) (getf entity :|url|)
+	      (slot-value e 'text) (subseq text offset (+ offset length)))
+	(values e)))))
 
 
-(defun make-entities (entities)
-  (mapcar #'make-entity entities))
+(defun make-entities (entities text)
+  (mapcar (alexandria:curry #'make-entity text) entities))
 
 
 (defun make-user (user)
@@ -100,7 +106,7 @@
 	    (slot-value m 'forward-from) (make-user (getf message :|forward_from|))
 	    (slot-value m 'forward-date) (getf message :|forward_date|)
 	    (slot-value m 'reply-to-message) (make-message (getf message :|reply_to_message|))
-	    (slot-value m 'entities) (make-entities (getf message :|entities|))
+	    (slot-value m 'entities) (make-entities (getf message :|entities|) (slot-value m 'text))
 	    (slot-value m 'audio) (getf message :|audio|)
 	    (slot-value m 'document) (getf message :|document|)
 	    (slot-value m 'photo) (getf message :|photo|)

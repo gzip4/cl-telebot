@@ -22,6 +22,7 @@
 
 	   #:entity
 	   #:entity-type
+	   #:entity-text
 	   #:entity-offset
 	   #:entity-length
 	   #:entity-url

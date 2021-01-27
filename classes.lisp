@@ -21,7 +21,8 @@
   ((type :reader entity-type)
    (offset :reader entity-offset)
    (length :reader entity-length)
-   (url :reader entity-url :initform nil)))
+   (url :reader entity-url :initform nil)
+   (text :reader entity-text)))
 
 (defclass object ()
   ((id :reader object-id :initarg :id)))
