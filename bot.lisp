@@ -17,14 +17,15 @@
 
 
 (defun init-bot-params (bot params)
-  (setf (slot-value bot 'supports-inline-queries) (getf params :|supports_inline_queries|)
-	(slot-value bot 'can-read-all-group-messages) (getf params :|can_read_all_group_messages|)
-	(slot-value bot 'can-join-groups) (getf params :|can_join_groups|)
-	(slot-value bot 'username) (getf params :|username|)
-	(slot-value bot 'first-name) (getf params :|first_name|)
-	(slot-value bot 'id) (getf params :|id|))
+  (flet ((f (x) (if (char= x #\_) #\- x)))
+    (let ((keys '(:|supports_inline_queries| :|can_read_all_group_messages|
+		  :|can_join_groups| :|username| :|first_name| :|id|)))
+      (loop :for key :in keys
+	    :for slot-name = (string-upcase (map 'string #'f (string key)))
+	    :for slot = (intern slot-name :cl-telebot)
+	    :do (setf (slot-value bot slot) (getf params key)))))
   (when *debug* (describe bot))
-  nil)
+  (values nil))
 
 
 (defun skip-update (update)
