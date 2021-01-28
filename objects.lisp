@@ -95,39 +95,57 @@
       (values c))))
 
 
+(defun replace-char (from to char)
+  (if (char= char from) to char))
+
+
+(defvar +simple-fields+
+  '(:|date|
+    :|edit_date|
+    :|text|
+    :|forward_date|
+    :|audio|
+    :|document|
+    :|photo|
+    :|sticker|
+    :|video|
+    :|voice|
+    :|caption|
+    :|contact|
+    :|location|
+    :|venue|
+    :|new_chat_title|
+    :|new_chat_photo|
+    :|delete_chat_photo|
+    :|group_chat_created|
+    :|supergroup_chat_created|
+    :|channel_chat_created|
+    :|migrate_to_chat_id|
+    :|migrate_from_chat_id|))
+
+
+(defvar +simple-slots+
+  (let ((f (alexandria:curry #'replace-char #\_ #\-)))
+    (loop :for key :in +simple-fields+
+	  :for slot-name = (string-upcase (map 'string f (string key)))
+	  :for slot = (intern slot-name *package*)
+	  :collect (cons key slot))))
+
+
 (defun make-message (message)
   (when message
     (let ((m (make-instance 'message :id (getf message :|message_id|))))
-      (setf (slot-value m 'date) (getf message :|date|)
-	    (slot-value m 'chat) (make-chat (getf message :|chat|))
+      (loop :for (key . slot) :in +simple-slots+
+	    :do (setf (slot-value m slot) (getf message key)))
+      (setf (slot-value m 'chat) (make-chat (getf message :|chat|))
 	    (slot-value m 'from) (make-user (getf message :|from|))
-	    (slot-value m 'edit-date) (getf message :|edit_date|)
-	    (slot-value m 'text) (getf message :|text|)
 	    (slot-value m 'forward-from) (make-user (getf message :|forward_from|))
-	    (slot-value m 'forward-date) (getf message :|forward_date|)
 	    (slot-value m 'reply-to-message) (make-message (getf message :|reply_to_message|))
 	    (slot-value m 'entities) (make-entities (getf message :|entities|) (slot-value m 'text))
-	    (slot-value m 'audio) (getf message :|audio|)
-	    (slot-value m 'document) (getf message :|document|)
-	    (slot-value m 'photo) (getf message :|photo|)
-	    (slot-value m 'sticker) (getf message :|sticker|)
-	    (slot-value m 'video) (getf message :|video|)
-	    (slot-value m 'voice) (getf message :|voice|)
-	    (slot-value m 'caption) (getf message :|caption|)
-	    (slot-value m 'contact) (getf message :|contact|)
-	    (slot-value m 'location) (getf message :||)
-	    (slot-value m 'venue) (getf message :|venue|)
 	    (slot-value m 'new-chat-member) (make-user (getf message :|new_chat_member|))
 	    (slot-value m 'left-chat-member) (make-user (getf message :|left_chat_member|))
-	    (slot-value m 'new-chat-title) (getf message :|new_chat_title|)
-	    (slot-value m 'new-chat-photo) (getf message :|new_chat_photo|)
-	    (slot-value m 'delete-chat-photo) (getf message :|delete_chat_photo|)
-	    (slot-value m 'group-chat-created) (getf message :|group_chat_created|)
-	    (slot-value m 'supergroup-chat-created) (getf message :|supergroup_chat_created|)
-	    (slot-value m 'channel-chat-created) (getf message :|channel_chat_created|)
-	    (slot-value m 'migrate-to-chat-id) (getf message :|migrate_to_chat_id|)
-	    (slot-value m 'migrate-from-chat-id) (getf message :|migrate_from_chat_id|)
 	    (slot-value m 'pinned-message) (make-message (getf message :|pinned_message|)))
+      (when *debug* (describe m))
       (values m))))
 
 
