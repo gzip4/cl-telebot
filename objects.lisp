@@ -136,7 +136,8 @@
   (when message
     (let ((m (make-instance 'message :id (getf message :|message_id|))))
       (loop :for (key . slot) :in +simple-slots+
-	    :do (setf (slot-value m slot) (getf message key)))
+	    :for value = (getf message key)
+	    :do (when value (setf (slot-value m slot) value)))
       (setf (slot-value m 'chat) (make-chat (getf message :|chat|))
 	    (slot-value m 'from) (make-user (getf message :|from|))
 	    (slot-value m 'forward-from) (make-user (getf message :|forward_from|))
