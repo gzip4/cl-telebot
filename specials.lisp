@@ -1,7 +1,6 @@
 
 (in-package :cl-telebot)
 
-
 (defvar *bot* nil)
 (defvar *update* nil)
 (defvar *update-raw* nil)
