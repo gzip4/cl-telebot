@@ -1,5 +1,7 @@
 ## Common Lisp Telegram Bot API
 
+[![Quicklisp dist](http://quickdocs.org/badge/cl-telebot.svg)](http://quickdocs.org/cl-telebot/)
+
 See the [Telegram Bot API](https://core.telegram.org/bots/api).
 
 Code samples:
